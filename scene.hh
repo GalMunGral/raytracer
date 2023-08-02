@@ -42,9 +42,9 @@ public:
 class triangle : public object
 {
 public:
-  vec p0, p1, p2, n, e1, e2;
+  vec p0, p1, p2, n0, n1, n2, e1, e2;
   color _color;
-  triangle(vec p0, vec p1, vec p2, color color);
+  triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, color color);
   ~triangle();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);

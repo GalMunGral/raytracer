@@ -70,11 +70,11 @@ void render(scene &sc, std::vector<unsigned char> &image)
       auto c = trace(sc, eye, dir);
       if (c)
       {
-
         image[4 * (i * sc.width + j)] = gamma(c->r) * 255;
         image[4 * (i * sc.width + j) + 1] = gamma(c->g) * 255;
         image[4 * (i * sc.width + j) + 2] = gamma(c->b) * 255;
         image[4 * (i * sc.width + j) + 3] = 255;
+        delete c;
       }
     }
   }

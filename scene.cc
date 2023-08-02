@@ -10,7 +10,9 @@ scene parse(char *filename)
   std::ifstream fs(filename);
   std::string cmd;
   std::vector<vec> points;
+  std::vector<vec> normals;
   color cur_color(1, 1, 1);
+  vec cur_normal;
   while (fs >> cmd)
   {
     if (cmd == "png")
@@ -38,13 +40,20 @@ scene parse(char *filename)
       float x, y, z;
       fs >> x >> y >> z;
       points.push_back(vec(x, y, z));
+      normals.push_back(cur_normal);
+    }
+    else if (cmd == "normal")
+    {
+      fs >> cur_normal.x >> cur_normal.y >> cur_normal.z;
     }
     else if (cmd == "trif")
     {
       int i, j, k;
       fs >> i >> j >> k;
       sc.objects.push_back(
-          new triangle(points[i - 1], points[j - 1], points[k - 1], cur_color));
+          new triangle(points[i - 1], points[j - 1], points[k - 1],
+                       normals[i - 1], normals[j - 1], normals[k - 1],
+                       cur_color));
     }
     else if (cmd == "sun")
     {
@@ -114,10 +123,14 @@ color plane::color_at(vec)
   return _color;
 }
 
-triangle::triangle(vec p0, vec p1, vec p2, color color)
-    : p0(p0), p1(p1), p2(p2), _color(color)
+triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, color color)
+    : p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2), _color(color)
 {
-  n = (p1 - p0).cross(p2 - p0).normalize();
+  auto n = (p1 - p0).cross(p2 - p0);
+  if (!n0.norm() || !n1.norm() || !n2.norm())
+  {
+    n0 = n1 = n2 = n.normalize();
+  }
   e1 = (p2 - p0).cross(n);
   e1 = e1 / (e1.dot(p1 - p0));
   e2 = (p1 - p0).cross(n);
@@ -128,6 +141,7 @@ triangle::~triangle(){};
 
 float triangle::intersect(vec o, vec dir)
 {
+  auto n = (p1 - p0).cross(p2 - p0);
   auto t = (p0 - o).dot(n) / (dir.dot(n));
   if (t < 0)
     return 0;
@@ -138,9 +152,10 @@ float triangle::intersect(vec o, vec dir)
   return t;
 }
 
-vec triangle::norm_at(vec)
+vec triangle::norm_at(vec p)
 {
-  return n;
+  auto b1 = (p - p0).dot(e1), b2 = (p - p0).dot(e2), b0 = 1 - b1 - b2;
+  return b0 * n0 + b1 * n1 + b2 * n2;
 }
 
 color triangle::color_at(vec)
