@@ -8,27 +8,14 @@ float gamma(float l)
   return l <= 0.0031308 ? 12.92 * l : 1.055 * std::pow(l, 1 / 2.4) - 0.055;
 }
 
-float intersect(sphere &s, vec o, vec dir)
-{
-  auto inside = (s.c - o).norm() < s.r;
-  auto t_center = (s.c - o).dot(dir);
-  if (!inside && t_center < 0)
-    return 0;
-  auto d = (o + (t_center * dir) - s.c).norm();
-  if (!inside && s.r < d)
-    return 0;
-  auto t_offset = sqrt(s.r * s.r - d * d);
-  return inside ? t_center + t_offset : t_center - t_offset;
-}
-
 color *trace(scene &sc, vec o, vec dir)
 {
   int hit = -1;
   auto t_hit = std::numeric_limits<float>::max();
-  int n_spheres = sc.spheres.size();
-  for (int i = 0; i < n_spheres; ++i)
+  int n_objects = sc.objects.size();
+  for (int i = 0; i < n_objects; ++i)
   {
-    auto t = intersect(sc.spheres[i], o, dir);
+    auto t = sc.objects[i]->intersect(o, dir);
     if (t && t < t_hit)
     {
       t_hit = t;
@@ -39,7 +26,7 @@ color *trace(scene &sc, vec o, vec dir)
     return nullptr;
 
   auto p = o + t_hit * dir;
-  auto n = (p - sc.spheres[hit].c).normalize();
+  auto n = sc.objects[hit]->norm_at(p);
 
   // use the other side
   if (n.dot(dir) > 0)
@@ -49,10 +36,12 @@ color *trace(scene &sc, vec o, vec dir)
   for (auto &l : sc.lights)
   {
     auto l_dir = l->dir(p);
+    auto l_dist = l->dist(p);
     bool in_shadow = false;
-    for (int i = 0; i < n_spheres; ++i)
+    for (int i = 0; i < n_objects; ++i)
     {
-      if (i != hit && intersect(sc.spheres[i], p, l_dir))
+      float o_dist = 0;
+      if (i != hit && (o_dist = sc.objects[i]->intersect(p, l_dir)) && o_dist < l_dist)
       {
         in_shadow = true;
         break;
@@ -61,7 +50,7 @@ color *trace(scene &sc, vec o, vec dir)
     if (!in_shadow)
     {
       auto lambert = std::max(.0f, l_dir.dot(n));
-      *c += lambert * l->intensity(p) * sc.spheres[hit].color;
+      *c += lambert * l->intensity(p) * sc.objects[hit]->color_at(p);
     }
   }
   return c;

@@ -21,10 +21,9 @@ scene parse(char *filename)
     }
     else if (cmd == "sphere")
     {
-      sphere s;
-      fs >> s.c.x >> s.c.y >> s.c.z >> s.r;
-      s.color = cur_color;
-      sc.spheres.push_back(s);
+      float x, y, z, r;
+      fs >> x >> y >> z >> r;
+      sc.objects.push_back(new sphere(vec(x, y, z), r, cur_color));
     }
     else if (cmd == "sun")
     {
@@ -44,6 +43,33 @@ scene parse(char *filename)
   return sc;
 }
 
+object::~object(){};
+
+sphere::~sphere(){};
+
+float sphere::intersect(vec o, vec dir)
+{
+  auto inside = (c - o).norm() < r;
+  auto t_center = (c - o).dot(dir);
+  if (!inside && t_center < 0)
+    return 0;
+  auto d = (o + (t_center * dir) - c).norm();
+  if (!inside && r < d)
+    return 0;
+  auto t_offset = sqrt(r * r - d * d);
+  return inside ? t_center + t_offset : t_center - t_offset;
+}
+
+vec sphere::norm_at(vec p)
+{
+  return (p - c).normalize();
+}
+
+color sphere::color_at(vec)
+{
+  return _color;
+}
+
 light::~light(){};
 
 directional_light::~directional_light(){};
@@ -58,6 +84,11 @@ color directional_light::intensity(vec)
   return _color;
 }
 
+float directional_light::dist(vec)
+{
+  return std::numeric_limits<float>::max();
+}
+
 point_light::~point_light(){};
 
 vec point_light::dir(vec o)
@@ -67,6 +98,11 @@ vec point_light::dir(vec o)
 
 color point_light::intensity(vec o)
 {
-  auto d = (_pos - o).norm();
+  auto d = dist(o);
   return _color * std::pow(1 / d, 2);
+}
+
+float point_light::dist(vec o)
+{
+  return (_pos - o).norm();
 }
