@@ -25,6 +25,7 @@ struct vec
   vec operator*(float c);
   vec operator/(float c);
   float dot(vec o);
+  vec cross(vec o);
   float squared_norm();
   float norm();
   vec normalize();

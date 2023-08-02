@@ -39,6 +39,18 @@ public:
   color color_at(vec p);
 };
 
+class triangle : public object
+{
+public:
+  vec p0, p1, p2, n, e1, e2;
+  color _color;
+  triangle(vec p0, vec p1, vec p2, color color);
+  ~triangle();
+  float intersect(vec o, vec dir);
+  vec norm_at(vec p);
+  color color_at(vec p);
+};
+
 class light
 {
 

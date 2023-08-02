@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 #include "scene.hh"
 
 scene parse(char *filename)
@@ -8,6 +9,7 @@ scene parse(char *filename)
   scene sc;
   std::ifstream fs(filename);
   std::string cmd;
+  std::vector<vec> points;
   color cur_color(1, 1, 1);
   while (fs >> cmd)
   {
@@ -30,6 +32,19 @@ scene parse(char *filename)
       float a, b, c, d;
       fs >> a >> b >> c >> d;
       sc.objects.push_back(new plane(a, b, c, d, cur_color));
+    }
+    else if (cmd == "xyz")
+    {
+      float x, y, z;
+      fs >> x >> y >> z;
+      points.push_back(vec(x, y, z));
+    }
+    else if (cmd == "trif")
+    {
+      int i, j, k;
+      fs >> i >> j >> k;
+      sc.objects.push_back(
+          new triangle(points[i - 1], points[j - 1], points[k - 1], cur_color));
     }
     else if (cmd == "sun")
     {
@@ -95,6 +110,40 @@ vec plane::norm_at(vec)
 }
 
 color plane::color_at(vec)
+{
+  return _color;
+}
+
+triangle::triangle(vec p0, vec p1, vec p2, color color)
+    : p0(p0), p1(p1), p2(p2), _color(color)
+{
+  n = (p1 - p0).cross(p2 - p0).normalize();
+  e1 = (p2 - p0).cross(n);
+  e1 = e1 / (e1.dot(p1 - p0));
+  e2 = (p1 - p0).cross(n);
+  e2 = e2 / (e2.dot(p2 - p0));
+}
+
+triangle::~triangle(){};
+
+float triangle::intersect(vec o, vec dir)
+{
+  auto t = (p0 - o).dot(n) / (dir.dot(n));
+  if (t < 0)
+    return 0;
+  auto p = o + t * dir;
+  auto b1 = (p - p0).dot(e1), b2 = (p - p0).dot(e2), b0 = 1 - b1 - b2;
+  if (b0 < 0 || b1 < 0 || b2 < 0)
+    return 0;
+  return t;
+}
+
+vec triangle::norm_at(vec)
+{
+  return n;
+}
+
+color triangle::color_at(vec)
 {
   return _color;
 }

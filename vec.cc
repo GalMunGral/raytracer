@@ -68,6 +68,11 @@ float vec::dot(vec o)
   return x * o.x + y * o.y + z * o.z;
 }
 
+vec vec::cross(vec o)
+{
+  return vec(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x);
+}
+
 float vec::squared_norm()
 {
   return dot(*this);
