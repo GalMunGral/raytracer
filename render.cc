@@ -1,6 +1,11 @@
 #include <iostream>
+#include <random>
 #include <algorithm>
+#include <utility>
 #include "render.hh"
+
+std::default_random_engine gen;
+std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
 float gamma(float l)
 {
@@ -8,73 +13,130 @@ float gamma(float l)
   return l <= 0.0031308 ? 12.92 * l : 1.055 * std::pow(l, 1 / 2.4) - 0.055;
 }
 
-color *trace(scene &sc, vec o, vec dir)
+vec next_dir(vec n)
 {
-  int hit = -1;
-  auto t_hit = std::numeric_limits<float>::max();
-  int n_objects = sc.objects.size();
-  for (int i = 0; i < n_objects; ++i)
+  vec q;
+  do
   {
-    auto t = sc.objects[i]->intersect(o, dir);
-    if (t && t < t_hit)
+    q = vec(2 * dist(gen) - 1, 2 * dist(gen) - 1, 2 * dist(gen) - 1);
+  } while (q.norm() >= 1);
+
+  return (n + q).normalize();
+}
+
+struct ray_trace_result
+{
+  object *obj_hit = nullptr;
+  vec p;
+  color accumulated;
+  ray_trace_result(){};
+  ray_trace_result(object *obj, vec p, color c)
+      : obj_hit(obj), p(p), accumulated(c){};
+};
+
+color illuminate(scene &sc, light *light, object *target, vec p, vec n)
+{
+  color color;
+  auto l_dir = light->dir(p);
+  auto l_dist = light->dist(p);
+  bool in_shadow = false;
+  for (auto *obj : sc.objects)
+  {
+    float o_dist = 0;
+    if (obj != target && (o_dist = obj->intersect(p, l_dir)) && o_dist < l_dist)
     {
-      t_hit = t;
-      hit = i;
+      in_shadow = true;
+      break;
     }
   }
-  if (hit == -1)
-    return nullptr;
+  if (!in_shadow)
+  {
+    auto lambert = std::max(.0f, l_dir.dot(n));
+    // std::cout << "intensity" << light->intensity(p) << '\n';
+    color += lambert * light->intensity(p) * target->color_at(p);
+  }
+  return color;
+}
+
+ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
+{
+  // std::cout << d << dir << '\n';
+
+  object *obj_hit = nullptr;
+  auto t_hit = std::numeric_limits<float>::max();
+  for (auto *obj : sc.objects)
+  {
+    float t;
+    if (obj != from && (t = obj->intersect(o, dir)) && t < t_hit)
+    {
+      t_hit = t;
+      obj_hit = obj;
+    }
+  }
+
+  if (!obj_hit)
+    return ray_trace_result();
 
   auto p = o + t_hit * dir;
-  auto n = sc.objects[hit]->norm_at(p);
+  auto n = obj_hit->norm_at(p);
 
   // use the other side
   if (n.dot(dir) > 0)
     n = -n;
 
-  auto c = new color;
-  for (auto &l : sc.lights)
+  color color;
+
+  for (auto *l : sc.lights)
   {
-    auto l_dir = l->dir(p);
-    auto l_dist = l->dist(p);
-    bool in_shadow = false;
-    for (int i = 0; i < n_objects; ++i)
+    color += illuminate(sc, l, obj_hit, p, n);
+  }
+
+  if (d)
+  {
+    // shoot secondary rays
+    auto res = ray_trace(sc, obj_hit, p, next_dir(n), d - 1);
+    if (res.obj_hit)
     {
-      float o_dist = 0;
-      if (i != hit && (o_dist = sc.objects[i]->intersect(p, l_dir)) && o_dist < l_dist)
-      {
-        in_shadow = true;
-        break;
-      }
-    }
-    if (!in_shadow)
-    {
-      auto lambert = std::max(.0f, l_dir.dot(n));
-      *c += lambert * l->intensity(p) * sc.objects[hit]->color_at(p);
+      point_light l(res.p, res.accumulated);
+      color += illuminate(sc, &l, obj_hit, p, n);
     }
   }
-  return c;
+
+  std::cout << d << "dir" << obj_hit->norm_at(p) << n << next_dir(n) << "color" << color << '\n';
+  return {obj_hit, p, color};
 }
 
 void render(scene &sc, std::vector<unsigned char> &image)
 {
+  float w = sc.width, h = sc.height;
   vec eye, forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0);
 
   for (int i = 0; i < sc.height; ++i)
   {
     for (int j = 0; j < sc.width; ++j)
     {
-      auto x = float(2 * j - sc.width) / std::max(sc.width, sc.height);
-      auto y = float(sc.height - 2 * i) / std::max(sc.width, sc.height);
-      auto dir = (forward + x * right + y * up).normalize();
-      auto c = trace(sc, eye, dir);
-      if (c)
+      std::cout << i << ',' << j << '\n';
+      bool hit_any = false;
+      color c;
+      for (int k = 0; k < sc.aa; ++k)
       {
-        image[4 * (i * sc.width + j)] = gamma(c->r) * 255;
-        image[4 * (i * sc.width + j) + 1] = gamma(c->g) * 255;
-        image[4 * (i * sc.width + j) + 2] = gamma(c->b) * 255;
+        float x = j + dist(gen), y = i + dist(gen);
+        auto sx = (2 * x - w) / std::max(w, h);
+        auto sy = float(h - 2 * y) / std::max(w, h);
+        auto dir = (forward + sx * right + sy * up).normalize();
+        auto res = ray_trace(sc, nullptr, eye, dir, sc.d);
+        if (res.obj_hit)
+        {
+          hit_any = true;
+          c = c + (1.0f / sc.aa) * res.accumulated;
+        }
+      }
+      if (hit_any)
+      {
+        image[4 * (i * sc.width + j)] = gamma(c.r) * 255;
+        image[4 * (i * sc.width + j) + 1] = gamma(c.g) * 255;
+        image[4 * (i * sc.width + j) + 2] = gamma(c.b) * 255;
         image[4 * (i * sc.width + j) + 3] = 255;
-        delete c;
       }
     }
   }

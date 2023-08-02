@@ -94,7 +94,7 @@ public:
 class scene
 {
 public:
-  int width, height;
+  int width, height, aa = 1, d = 1;
   std::string filename;
   std::vector<object *> objects;
   std::vector<light *> lights;

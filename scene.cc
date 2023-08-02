@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 #include "scene.hh"
 
 scene parse(char *filename)
@@ -16,6 +17,7 @@ scene parse(char *filename)
   color cur_color(1, 1, 1);
   vec cur_normal;
   vec cur_texcoord;
+
   while (fs >> cmd)
   {
     if (cmd == "png")
@@ -37,7 +39,12 @@ scene parse(char *filename)
     }
     else if (cmd == "color")
     {
-      fs >> cur_color.r >> cur_color.g >> cur_color.b;
+      float r, g, b;
+      fs >> r >> g >> b;
+      cur_color = color(r, g, b);
+      // cur_color = color(std::clamp(r, -1.0f, 1.0f),
+      //                   std::clamp(g, -1.0f, 1.0f),
+      //                   std::clamp(b, -1.0f, 1.0f));
     }
     else if (cmd == "sphere")
     {
@@ -86,6 +93,14 @@ scene parse(char *filename)
       std::string filename;
       fs >> filename;
       cur_texture = new texture(filename);
+    }
+    else if (cmd == "aa")
+    {
+      fs >> sc.aa;
+    }
+    else if (cmd == "gi")
+    {
+      fs >> sc.d;
     }
   }
 
