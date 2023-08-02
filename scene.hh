@@ -16,11 +16,24 @@ public:
 class sphere : public object
 {
 public:
-  sphere(vec c, float r, color color) : c(c), r(r), _color(color){};
-  ~sphere();
   vec c;
   float r;
   color _color;
+  sphere(float x, float y, float z, float r, color color)
+      : c(x, y, z), r(r), _color(color){};
+  ~sphere();
+  float intersect(vec o, vec dir);
+  vec norm_at(vec p);
+  color color_at(vec p);
+};
+
+class plane : public object
+{
+public:
+  float a, b, c, d;
+  color _color;
+  plane(float a, float b, float c, float d, color color) : a(a), b(b), c(c), d(d), _color(color){};
+  ~plane();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);
   color color_at(vec p);

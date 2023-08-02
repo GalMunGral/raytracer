@@ -23,7 +23,13 @@ scene parse(char *filename)
     {
       float x, y, z, r;
       fs >> x >> y >> z >> r;
-      sc.objects.push_back(new sphere(vec(x, y, z), r, cur_color));
+      sc.objects.push_back(new sphere(x, y, z, r, cur_color));
+    }
+    else if (cmd == "plane")
+    {
+      float a, b, c, d;
+      fs >> a >> b >> c >> d;
+      sc.objects.push_back(new plane(a, b, c, d, cur_color));
     }
     else if (cmd == "sun")
     {
@@ -66,6 +72,29 @@ vec sphere::norm_at(vec p)
 }
 
 color sphere::color_at(vec)
+{
+  return _color;
+}
+
+plane::~plane(){};
+
+float plane::intersect(vec o, vec dir)
+{
+  auto p = a   ? vec(-d / a, 0, 0)
+           : b ? vec(0, -d / b, 0)
+               : vec(0, 0, -d / c);
+  auto n = vec(a, b, c);
+  ;
+  auto t = (p - o).dot(n) / (dir.dot(n));
+  return std::max(t, 0.0f);
+}
+
+vec plane::norm_at(vec)
+{
+  return vec(a, b, c).normalize();
+}
+
+color plane::color_at(vec)
 {
   return _color;
 }
