@@ -13,15 +13,24 @@ float gamma(float l)
   return l <= 0.0031308 ? 12.92 * l : 1.055 * std::pow(l, 1 / 2.4) - 0.055;
 }
 
-vec next_dir(vec n)
+vec sample_unit_disk()
+{
+  vec q;
+  do
+  {
+    q = vec(2 * uniform(gen) - 1, 2 * uniform(gen) - 1, 0);
+  } while (q.norm() >= 1);
+  return q;
+}
+
+vec sample_unit_sphere()
 {
   vec q;
   do
   {
     q = vec(2 * uniform(gen) - 1, 2 * uniform(gen) - 1, 2 * uniform(gen) - 1);
   } while (q.norm() >= 1);
-
-  return (n + q).normalize();
+  return q;
 }
 
 struct ray_trace_result
@@ -100,7 +109,7 @@ ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
   if (d)
   {
     // shoot secondary rays
-    auto random_dir = next_dir(n);
+    auto random_dir = (n + sample_unit_sphere()).normalize();
     auto res = ray_trace(sc, p, random_dir, d - 1, bounces);
     if (res.obj_hit)
     {
@@ -140,7 +149,6 @@ ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
 void render(scene &sc, std::vector<unsigned char> &image)
 {
   float w = sc.width, h = sc.height;
-  vec eye, forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0);
 
   for (int i = 0; i < sc.height; ++i)
   {
@@ -148,13 +156,38 @@ void render(scene &sc, std::vector<unsigned char> &image)
     {
       bool hit_any = false;
       vec c;
+
+      // randomly sample rays in a pixel
       for (int k = 0; k < sc.aa; ++k)
       {
+        auto origin = sc.eye;
+        auto forward = sc.forward;
+
         float x = j + uniform(gen), y = i + uniform(gen);
-        auto sx = (2 * x - w) / std::max(w, h);
-        auto sy = float(h - 2 * y) / std::max(w, h);
-        auto dir = (forward + sx * right + sy * up).normalize();
-        auto res = ray_trace(sc, eye, dir, sc.d, sc.bounces);
+        float sx = (2 * x - w) / std::max(w, h);
+        float sy = float(h - 2 * y) / std::max(w, h);
+
+        if (sc.fisheye)
+        {
+          sx /= sc.forward.norm();
+          sy /= sc.forward.norm();
+          float r2 = (sx * sx + sy * sy);
+          if (r2 > 1)
+            continue;
+          forward = std::sqrt(1 - r2) * (forward.normalize());
+        }
+
+        auto dir = (forward + sx * sc.right + sy * sc.up).normalize();
+
+        if (sc.dof)
+        {
+          auto focal_point = sc.eye + sc.focus * dir;
+          auto offset = sc.lens * sample_unit_disk();
+          origin += offset.x * sc.right + offset.y * sc.up;
+          dir = (focal_point - origin).normalize();
+        }
+
+        auto res = ray_trace(sc, origin, dir, sc.d, sc.bounces);
         if (res.obj_hit)
         {
           hit_any = true;

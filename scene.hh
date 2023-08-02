@@ -119,7 +119,12 @@ public:
 class scene
 {
 public:
-  int width, height, aa = 1, d = 0, bounces = 4;
+  int width, height, aa, d, bounces;
+  float focus, lens;
+  vec eye, forward, right, up;
+  bool fisheye, dof;
+  scene()
+      : aa(1), bounces(4), eye(0, 0, 0), forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0){};
   std::string filename;
   std::vector<object *> objects;
   std::vector<light *> lights;

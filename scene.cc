@@ -151,6 +151,31 @@ scene parse(char *filename)
     {
       fs >> cur_roughness;
     }
+    else if (cmd == "eye")
+    {
+      fs >> sc.eye.x >> sc.eye.y >> sc.eye.z;
+    }
+    else if (cmd == "forward")
+    {
+      fs >> sc.forward.x >> sc.forward.y >> sc.forward.z;
+      sc.right = sc.forward.cross(sc.up).normalize();
+      sc.up = sc.right.cross(sc.forward).normalize();
+    }
+    else if (cmd == "up")
+    {
+      fs >> sc.up.x >> sc.up.y >> sc.up.z;
+      sc.right = sc.forward.cross(sc.up).normalize();
+      sc.up = sc.right.cross(sc.forward).normalize();
+    }
+    else if (cmd == "fisheye")
+    {
+      sc.fisheye = true;
+    }
+    else if (cmd == "dof")
+    {
+      fs >> sc.focus >> sc.lens;
+      sc.dof = true;
+    }
   }
 
   return sc;
