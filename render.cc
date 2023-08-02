@@ -23,22 +23,23 @@ float intersect(sphere &s, vec o, vec dir)
 
 color trace(scene &sc, vec o, vec dir)
 {
-  sphere *sphere_hit = nullptr;
+  int hit = -1;
   auto t_hit = std::numeric_limits<float>::max();
-  for (auto &s : sc.spheres)
+  int n_spheres = sc.spheres.size();
+  for (int i = 0; i < n_spheres; ++i)
   {
-    auto t = intersect(s, o, dir);
+    auto t = intersect(sc.spheres[i], o, dir);
     if (t && t < t_hit)
     {
       t_hit = t;
-      sphere_hit = &s;
+      hit = i;
     }
   }
-  if (!sphere_hit)
+  if (hit == -1)
     return color(-1, -1, -1);
 
   auto p = o + t_hit * dir;
-  auto n = (p - sphere_hit->c).normalize();
+  auto n = (p - sc.spheres[hit].c).normalize();
 
   // use the other side
   if (n.dot(dir) > 0)
@@ -47,8 +48,21 @@ color trace(scene &sc, vec o, vec dir)
   color color;
   for (auto &l : sc.lights)
   {
-    auto lambert = std::max(.0f, l.dir.normalize().dot(n));
-    color = color + lambert * l.color * sphere_hit->color;
+    auto l_dir = l.dir.normalize();
+    bool in_shadow = false;
+    for (int i = 0; i < n_spheres; ++i)
+    {
+      if (i != hit && intersect(sc.spheres[i], p, l_dir))
+      {
+        in_shadow = true;
+        break;
+      }
+    }
+    if (!in_shadow)
+    {
+      auto lambert = std::max(.0f, l_dir.dot(n));
+      color = color + lambert * l.color * sc.spheres[hit].color;
+    }
   }
   return color;
 }
