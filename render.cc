@@ -1,4 +1,3 @@
-#include <random>
 #include <iostream>
 #include <algorithm>
 #include "render.hh"
@@ -44,10 +43,6 @@ color trace(scene &sc, vec o, vec dir)
 
 void render(scene &sc, std::vector<unsigned char> &image)
 {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dist(0, 255);
-
   vec eye, forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0);
 
   for (int i = 0; i < sc.height; ++i)
