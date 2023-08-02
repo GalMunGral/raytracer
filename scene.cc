@@ -17,6 +17,8 @@ scene parse(char *filename)
   vec cur_color(1, 1, 1);
   vec cur_normal;
   vec cur_texcoord;
+  vec cur_shininess;
+  vec cur_transparency;
 
   while (fs >> cmd)
   {
@@ -47,13 +49,15 @@ scene parse(char *filename)
     {
       float x, y, z, r;
       fs >> x >> y >> z >> r;
-      sc.objects.push_back(new sphere(x, y, z, r, cur_color));
+      sc.objects.push_back(
+          new sphere(x, y, z, r, cur_color, cur_shininess, cur_transparency));
     }
     else if (cmd == "plane")
     {
       float a, b, c, d;
       fs >> a >> b >> c >> d;
-      sc.objects.push_back(new plane(a, b, c, d, cur_color));
+      sc.objects.push_back(
+          new plane(a, b, c, d, cur_color, cur_shininess, cur_transparency));
     }
     else if (cmd == "xyz")
     {
@@ -83,7 +87,7 @@ scene parse(char *filename)
           new triangle(points[i], points[j], points[k],
                        normals[i], normals[j], normals[k],
                        texcoords[i], texcoords[j], texcoords[k],
-                       cur_texture, cur_color));
+                       cur_texture, cur_color, cur_shininess, cur_transparency));
     }
     else if (cmd == "texture")
     {
@@ -101,8 +105,18 @@ scene parse(char *filename)
     }
     else if (cmd == "shininess")
     {
-      int s;
+      float s;
       fs >> s;
+      cur_shininess = vec(s, s, s);
+      if (fs >> s)
+      {
+        cur_shininess.y = s;
+        fs >> cur_shininess.z;
+      }
+      else
+      {
+        fs.clear();
+      }
     }
   }
 
@@ -159,9 +173,9 @@ vec plane::color_at(vec)
   return _color;
 }
 
-triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2,
-                   vec st0, vec st1, vec st2, texture *texture, vec color)
-    : p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2),
+triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, vec st0, vec st1, vec st2,
+                   texture *texture, vec color, vec s, vec t)
+    : object(s, t), p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2),
       st0(st0), st1(st1), st2(st2), _texture(texture), _color(color)
 {
   auto n = (p1 - p0).cross(p2 - p0);

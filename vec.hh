@@ -8,6 +8,7 @@ struct vec
   vec();
   vec(float x, float y, float z);
   vec operator+(vec o);
+  vec &operator+=(vec o);
   vec operator-(vec o);
   vec operator*(float c);
   vec operator*(vec c);

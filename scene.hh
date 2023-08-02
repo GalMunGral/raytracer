@@ -9,6 +9,8 @@
 class object
 {
 public:
+  vec shininess, transparency;
+  object(vec s, vec t) : shininess(s), transparency(t){};
   virtual ~object() = 0;
   virtual float intersect(vec o, vec dir) = 0;
   virtual vec norm_at(vec p) = 0;
@@ -21,8 +23,8 @@ public:
   vec c;
   float r;
   vec _color;
-  sphere(float x, float y, float z, float r, vec color)
-      : c(x, y, z), r(r), _color(color){};
+  sphere(float x, float y, float z, float r, vec color, vec s, vec t)
+      : object(s, t), c(x, y, z), r(r), _color(color){};
   ~sphere();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);
@@ -34,7 +36,8 @@ class plane : public object
 public:
   float a, b, c, d;
   vec _color;
-  plane(float a, float b, float c, float d, vec color) : a(a), b(b), c(c), d(d), _color(color){};
+  plane(float a, float b, float c, float d, vec color, vec s, vec t)
+      : object(s, t), a(a), b(b), c(c), d(d), _color(color){};
   ~plane();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);
@@ -47,8 +50,8 @@ public:
   vec p0, p1, p2, n0, n1, n2, st0, st1, st2, e1, e2;
   texture *_texture;
   vec _color;
-  triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2,
-           vec st0, vec st1, vec st2, texture *texture, vec color);
+  triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, vec st0, vec st1, vec st2,
+           texture *texture, vec color, vec s, vec t);
   ~triangle();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);

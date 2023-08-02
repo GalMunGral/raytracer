@@ -15,6 +15,14 @@ vec vec::operator+(vec o)
   return vec(x + o.x, y + o.y, z + o.z);
 }
 
+vec &vec::operator+=(vec o)
+{
+  x += o.x;
+  y += o.y;
+  z += o.z;
+  return *this;
+}
+
 vec vec::operator-(vec o)
 {
   return vec(x - o.x, y - o.y, z - o.z);

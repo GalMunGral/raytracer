@@ -81,24 +81,34 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
   if (n.dot(dir) > 0)
     n = -n;
 
-  vec color;
+  vec diffuse;
 
   for (auto *l : sc.lights)
   {
-    color = color + illuminate(sc, l, obj_hit, p, n);
+    diffuse += illuminate(sc, l, obj_hit, p, n);
   }
 
-  if (d)
+  if (d > 0)
   {
     // shoot secondary rays
-    auto dir = next_dir(n);
-    auto res = ray_trace(sc, obj_hit, p, dir, d - 1);
+    auto random_dir = next_dir(n);
+    auto res = ray_trace(sc, obj_hit, p, random_dir, d - 1);
     if (res.obj_hit)
     {
       point_light l(res.p, res.accumulated);
-      color = color + illuminate(sc, &l, obj_hit, p, n);
+      diffuse += illuminate(sc, &l, obj_hit, p, n);
     }
   }
+
+  vec refraction;
+  auto r = dir - 2 * dir.dot(n) * n;
+  auto reflection = ray_trace(sc, obj_hit, p, r, std::max(0, d - 1)).accumulated;
+
+  auto s = obj_hit->shininess, t = obj_hit->transparency;
+
+  auto color = s * reflection +
+               (vec(1, 1, 1) - s) * t * refraction +
+               (vec(1, 1, 1) - s) * (vec(1, 1, 1) - t) * diffuse;
 
   // std::cout << d << "dir" << obj_hit->norm_at(p) << n << next_dir(n) << "color" << color << '\n';
   return {obj_hit, p, color};
