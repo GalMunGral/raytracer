@@ -21,7 +21,7 @@ float intersect(sphere &s, vec o, vec dir)
   return inside ? t_center + t_offset : t_center - t_offset;
 }
 
-color trace(scene &sc, vec o, vec dir)
+color *trace(scene &sc, vec o, vec dir)
 {
   int hit = -1;
   auto t_hit = std::numeric_limits<float>::max();
@@ -36,7 +36,7 @@ color trace(scene &sc, vec o, vec dir)
     }
   }
   if (hit == -1)
-    return color(-1, -1, -1);
+    return nullptr;
 
   auto p = o + t_hit * dir;
   auto n = (p - sc.spheres[hit].c).normalize();
@@ -45,10 +45,10 @@ color trace(scene &sc, vec o, vec dir)
   if (n.dot(dir) > 0)
     n = -n;
 
-  color color;
+  auto c = new color;
   for (auto &l : sc.lights)
   {
-    auto l_dir = l.dir.normalize();
+    auto l_dir = l->dir(p);
     bool in_shadow = false;
     for (int i = 0; i < n_spheres; ++i)
     {
@@ -61,10 +61,10 @@ color trace(scene &sc, vec o, vec dir)
     if (!in_shadow)
     {
       auto lambert = std::max(.0f, l_dir.dot(n));
-      color = color + lambert * l.color * sc.spheres[hit].color;
+      *c += lambert * l->intensity(p) * sc.spheres[hit].color;
     }
   }
-  return color;
+  return c;
 }
 
 void render(scene &sc, std::vector<unsigned char> &image)
@@ -78,13 +78,15 @@ void render(scene &sc, std::vector<unsigned char> &image)
       auto x = float(2 * j - sc.width) / std::max(sc.width, sc.height);
       auto y = float(sc.height - 2 * i) / std::max(sc.width, sc.height);
       auto dir = (forward + x * right + y * up).normalize();
-      auto color = trace(sc, eye, dir);
-      if (color.r < 0)
-        continue;
-      image[4 * (i * sc.width + j)] = gamma(color.r) * 255;
-      image[4 * (i * sc.width + j) + 1] = gamma(color.g) * 255;
-      image[4 * (i * sc.width + j) + 2] = gamma(color.b) * 255;
-      image[4 * (i * sc.width + j) + 3] = 255;
+      auto c = trace(sc, eye, dir);
+      if (c)
+      {
+
+        image[4 * (i * sc.width + j)] = gamma(c->r) * 255;
+        image[4 * (i * sc.width + j) + 1] = gamma(c->g) * 255;
+        image[4 * (i * sc.width + j) + 2] = gamma(c->b) * 255;
+        image[4 * (i * sc.width + j) + 3] = 255;
+      }
     }
   }
 }

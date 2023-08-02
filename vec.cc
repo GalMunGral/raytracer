@@ -22,6 +22,14 @@ color operator*(float c, color l)
   return l * c;
 }
 
+color &color::operator+=(color o)
+{
+  r += o.r;
+  g += o.g;
+  b += o.b;
+  return *this;
+}
+
 vec::vec() : vec(0, 0, 0){};
 vec::vec(float x, float y, float z) : x(x), y(y), z(z){};
 

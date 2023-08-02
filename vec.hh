@@ -10,6 +10,7 @@ struct color
   color operator+(color o);
   color operator*(color o);
   color operator*(float c);
+  color &operator+=(color o);
 };
 
 color operator*(float c, color l);
