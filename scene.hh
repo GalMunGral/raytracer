@@ -13,7 +13,7 @@ struct sphere
 
 struct light
 {
-  vec pos;
+  vec dir;
   color color;
 };
 

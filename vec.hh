@@ -4,11 +4,15 @@
 
 struct color
 {
-  float r, g, b, a;
-  color() : color(0, 0, 0, 0){};
-  color(float r, float g, float b) : color(r, g, b, 1){};
-  color(float r, float g, float b, float a) : r(r), g(g), b(b), a(a){};
+  float r, g, b;
+  color() : color(0, 0, 0){};
+  color(float r, float g, float b) : r(r), g(g), b(b){};
+  color operator+(color o);
+  color operator*(color o);
+  color operator*(float c);
 };
+
+color operator*(float c, color l);
 
 struct vec
 {
@@ -25,6 +29,7 @@ struct vec
   vec normalize();
 };
 
+vec operator-(vec v);
 vec operator*(float c, vec v);
 
 std::ostream &operator<<(std::ostream &os, vec v);

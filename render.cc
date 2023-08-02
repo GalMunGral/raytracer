@@ -18,18 +18,28 @@ float intersect(sphere &s, vec o, vec dir)
 
 color trace(scene &sc, vec o, vec dir)
 {
-  sphere *hit = nullptr;
-  auto t_min = std::numeric_limits<float>::max();
+  sphere *sphere_hit = nullptr;
+  auto t_hit = std::numeric_limits<float>::max();
   for (auto &s : sc.spheres)
   {
     auto t = intersect(s, o, dir);
-    if (t && t < t_min)
+    if (t && t < t_hit)
     {
-      t_min = t;
-      hit = &s;
+      t_hit = t;
+      sphere_hit = &s;
     }
   }
-  return hit ? hit->color : color();
+  if (!sphere_hit)
+    return color(-1, -1, -1);
+
+  auto p = o + t_hit * dir;
+  auto n = (p - sphere_hit->c).normalize();
+  color color;
+  for (auto &l : sc.lights)
+  {
+    color = color + std::max(.0f, l.dir.normalize().dot(n)) * l.color;
+  }
+  return color;
 }
 
 void render(scene &sc, std::vector<unsigned char> &image)
@@ -48,10 +58,12 @@ void render(scene &sc, std::vector<unsigned char> &image)
       auto y = float(sc.height - 2 * i) / std::max(sc.width, sc.height);
       auto dir = (forward + x * right + y * up).normalize();
       auto color = trace(sc, eye, dir);
+      if (color.r < 0)
+        continue;
       image[4 * (i * sc.width + j)] = color.r * 255;
       image[4 * (i * sc.width + j) + 1] = color.g * 255;
       image[4 * (i * sc.width + j) + 2] = color.b * 255;
-      image[4 * (i * sc.width + j) + 3] = color.a * 255;
+      image[4 * (i * sc.width + j) + 3] = 255;
     }
   }
 }

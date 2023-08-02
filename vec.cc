@@ -2,8 +2,33 @@
 #include <cmath>
 #include "vec.hh"
 
+color color::operator+(color o)
+{
+  return color(r + o.r, g + o.g, b + o.b);
+}
+
+color color::operator*(color o)
+{
+  return color(r * o.r, g * o.g, b * o.b);
+}
+
+color color::operator*(float c)
+{
+  return color(r * c, g * c, b * c);
+}
+
+color operator*(float c, color l)
+{
+  return l * c;
+}
+
 vec::vec() : vec(0, 0, 0){};
 vec::vec(float x, float y, float z) : x(x), y(y), z(z){};
+
+vec operator-(vec v)
+{
+  return vec(-v.x, -v.y, -v.z);
+}
 
 vec vec::operator+(vec o)
 {
@@ -58,6 +83,6 @@ std::ostream &operator<<(std::ostream &os, vec v)
 
 std::ostream &operator<<(std::ostream &os, color c)
 {
-  os << "{ " << c.r << ',' << c.g << ',' << c.b << ',' << c.a << " }";
+  os << "{ " << c.r << ',' << c.g << ',' << c.b << " }";
   return os;
 }
