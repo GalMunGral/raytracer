@@ -14,6 +14,8 @@ scene parse(char *filename)
   std::vector<vec> normals;
   std::vector<vec> texcoords;
   texture *cur_texture = nullptr;
+  float cur_ior = 1.458;
+  float cur_roughness = 0;
   vec cur_color(1, 1, 1);
   vec cur_normal;
   vec cur_texcoord;
@@ -50,14 +52,16 @@ scene parse(char *filename)
       float x, y, z, r;
       fs >> x >> y >> z >> r;
       sc.objects.push_back(
-          new sphere(x, y, z, r, cur_color, cur_shininess, cur_transparency));
+          new sphere(x, y, z, r, cur_color,
+                     cur_shininess, cur_transparency, cur_ior, cur_roughness));
     }
     else if (cmd == "plane")
     {
       float a, b, c, d;
       fs >> a >> b >> c >> d;
       sc.objects.push_back(
-          new plane(a, b, c, d, cur_color, cur_shininess, cur_transparency));
+          new plane(a, b, c, d, cur_color,
+                    cur_shininess, cur_transparency, cur_ior, cur_roughness));
     }
     else if (cmd == "xyz")
     {
@@ -87,7 +91,9 @@ scene parse(char *filename)
           new triangle(points[i], points[j], points[k],
                        normals[i], normals[j], normals[k],
                        texcoords[i], texcoords[j], texcoords[k],
-                       cur_texture, cur_color, cur_shininess, cur_transparency));
+                       cur_texture, cur_color,
+                       cur_shininess, cur_transparency,
+                       cur_ior, cur_roughness));
     }
     else if (cmd == "texture")
     {
@@ -117,6 +123,33 @@ scene parse(char *filename)
       {
         fs.clear();
       }
+    }
+    else if (cmd == "transparency")
+    {
+      float t;
+      fs >> t;
+      cur_transparency = vec(t, t, t);
+      if (fs >> t)
+      {
+        cur_transparency.y = t;
+        fs >> cur_transparency.z;
+      }
+      else
+      {
+        fs.clear();
+      }
+    }
+    else if (cmd == "ior")
+    {
+      fs >> cur_ior;
+    }
+    else if (cmd == "bounces")
+    {
+      fs >> sc.bounces;
+    }
+    else if (cmd == "roughness")
+    {
+      fs >> cur_roughness;
     }
   }
 
@@ -171,22 +204,6 @@ vec plane::norm_at(vec)
 vec plane::color_at(vec)
 {
   return _color;
-}
-
-triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, vec st0, vec st1, vec st2,
-                   texture *texture, vec color, vec s, vec t)
-    : object(s, t), p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2),
-      st0(st0), st1(st1), st2(st2), _texture(texture), _color(color)
-{
-  auto n = (p1 - p0).cross(p2 - p0);
-  if (!n0.norm() || !n1.norm() || !n2.norm())
-  {
-    this->n0 = this->n1 = this->n2 = n.normalize();
-  }
-  e1 = (p2 - p0).cross(n);
-  e1 = e1 / (e1.dot(p1 - p0));
-  e2 = (p1 - p0).cross(n);
-  e2 = e2 / (e2.dot(p2 - p0));
 }
 
 triangle::~triangle(){};

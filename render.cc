@@ -5,7 +5,7 @@
 #include "render.hh"
 
 std::default_random_engine gen;
-std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+std::uniform_real_distribution<float> uniform(0.0f, 1.0f);
 
 float gamma(float l)
 {
@@ -18,7 +18,7 @@ vec next_dir(vec n)
   vec q;
   do
   {
-    q = vec(2 * dist(gen) - 1, 2 * dist(gen) - 1, 2 * dist(gen) - 1);
+    q = vec(2 * uniform(gen) - 1, 2 * uniform(gen) - 1, 2 * uniform(gen) - 1);
   } while (q.norm() >= 1);
 
   return (n + q).normalize();
@@ -57,14 +57,16 @@ vec illuminate(scene &sc, light *light, object *target, vec p, vec n)
   return color;
 }
 
-ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
+ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d, int bounces)
 {
+  o += 1e-6 * dir; // prevent self-intersection
   object *obj_hit = nullptr;
   auto t_hit = std::numeric_limits<float>::max();
   for (auto *obj : sc.objects)
   {
     float t;
-    if (obj != from && (t = obj->intersect(o, dir)) && t < t_hit)
+    // if (obj != from && (t = obj->intersect(o, dir)) && t < t_hit)
+    if ((t = obj->intersect(o, dir)) && t < t_hit)
     {
       t_hit = t;
       obj_hit = obj;
@@ -81,18 +83,26 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
   if (n.dot(dir) > 0)
     n = -n;
 
-  vec diffuse;
+  if (obj_hit->roughness)
+  {
+    std::normal_distribution<float> gaussian(0.0, obj_hit->roughness);
+    n.x += gaussian(gen);
+    n.y += gaussian(gen);
+    n.z += gaussian(gen);
+  }
+
+  vec diffuse, refraction, reflection;
 
   for (auto *l : sc.lights)
   {
     diffuse += illuminate(sc, l, obj_hit, p, n);
   }
 
-  if (d > 0)
+  if (d)
   {
     // shoot secondary rays
     auto random_dir = next_dir(n);
-    auto res = ray_trace(sc, obj_hit, p, random_dir, d - 1);
+    auto res = ray_trace(sc, obj_hit, p, random_dir, d - 1, bounces);
     if (res.obj_hit)
     {
       point_light l(res.p, res.accumulated);
@@ -100,17 +110,31 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
     }
   }
 
-  vec refraction;
-  auto r = dir - 2 * dir.dot(n) * n;
-  auto reflection = ray_trace(sc, obj_hit, p, r, std::max(0, d - 1)).accumulated;
+  if (bounces)
+  {
+    // reflection
+    auto r = (dir - 2 * dir.dot(n) * n).normalize();
+    reflection = ray_trace(sc, obj_hit, p, r, d, bounces - 1).accumulated;
+
+    // refraction
+    auto eta = dir.dot(obj_hit->norm_at(p)) > 0 ? obj_hit->ior : 1 / obj_hit->ior;
+    float k = 1.0 - std::pow(eta, 2) * (1 - n.dot(dir) * n.dot(dir));
+    if (k < 0)
+    {
+      refraction = reflection;
+    }
+    else
+    {
+      auto r = (eta * dir - (eta * n.dot(dir) + std::sqrt(k)) * n).normalize();
+      refraction = ray_trace(sc, obj_hit, p, r, d, bounces - 1).accumulated;
+    }
+  }
 
   auto s = obj_hit->shininess, t = obj_hit->transparency;
-
   auto color = s * reflection +
                (vec(1, 1, 1) - s) * t * refraction +
                (vec(1, 1, 1) - s) * (vec(1, 1, 1) - t) * diffuse;
 
-  // std::cout << d << "dir" << obj_hit->norm_at(p) << n << next_dir(n) << "color" << color << '\n';
   return {obj_hit, p, color};
 }
 
@@ -123,16 +147,15 @@ void render(scene &sc, std::vector<unsigned char> &image)
   {
     for (int j = 0; j < sc.width; ++j)
     {
-      // std::cout << i << ',' << j << '\n';
       bool hit_any = false;
       vec c;
       for (int k = 0; k < sc.aa; ++k)
       {
-        float x = j + dist(gen), y = i + dist(gen);
+        float x = j + uniform(gen), y = i + uniform(gen);
         auto sx = (2 * x - w) / std::max(w, h);
         auto sy = float(h - 2 * y) / std::max(w, h);
         auto dir = (forward + sx * right + sy * up).normalize();
-        auto res = ray_trace(sc, nullptr, eye, dir, sc.d);
+        auto res = ray_trace(sc, nullptr, eye, dir, sc.d, sc.bounces);
         if (res.obj_hit)
         {
           hit_any = true;
