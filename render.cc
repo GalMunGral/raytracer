@@ -2,6 +2,12 @@
 #include <algorithm>
 #include "render.hh"
 
+float gamma(float l)
+{
+  l = std::clamp(l, 0.0f, 1.0f);
+  return l <= 0.0031308 ? 12.92 * l : 1.055 * std::pow(l, 1 / 2.4) - 0.055;
+}
+
 float intersect(sphere &s, vec o, vec dir)
 {
   auto inside = (s.c - o).norm() < s.r;
@@ -33,10 +39,16 @@ color trace(scene &sc, vec o, vec dir)
 
   auto p = o + t_hit * dir;
   auto n = (p - sphere_hit->c).normalize();
+
+  // use the other side
+  if (n.dot(dir) > 0)
+    n = -n;
+
   color color;
   for (auto &l : sc.lights)
   {
-    color = color + std::max(.0f, l.dir.normalize().dot(n)) * l.color;
+    auto lambert = std::max(.0f, l.dir.normalize().dot(n));
+    color = color + lambert * l.color * sphere_hit->color;
   }
   return color;
 }
@@ -55,9 +67,9 @@ void render(scene &sc, std::vector<unsigned char> &image)
       auto color = trace(sc, eye, dir);
       if (color.r < 0)
         continue;
-      image[4 * (i * sc.width + j)] = color.r * 255;
-      image[4 * (i * sc.width + j) + 1] = color.g * 255;
-      image[4 * (i * sc.width + j) + 2] = color.b * 255;
+      image[4 * (i * sc.width + j)] = gamma(color.r) * 255;
+      image[4 * (i * sc.width + j) + 1] = gamma(color.g) * 255;
+      image[4 * (i * sc.width + j) + 2] = gamma(color.b) * 255;
       image[4 * (i * sc.width + j) + 3] = 255;
     }
   }
