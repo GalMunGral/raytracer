@@ -34,16 +34,16 @@ struct ray_trace_result
       : obj_hit(obj), p(p), accumulated(c){};
 };
 
-vec illuminate(scene &sc, light *light, object *target, vec p, vec n)
+vec illuminate(scene &sc, light *light, object *obj, vec p, vec n)
 {
   vec color;
   auto l_dir = light->dir(p);
   auto l_dist = light->dist(p);
   bool in_shadow = false;
-  for (auto *obj : sc.objects)
+  for (auto *o : sc.objects)
   {
     float o_dist = 0;
-    if (obj != target && (o_dist = obj->intersect(p, l_dir)) && o_dist < l_dist)
+    if (o != obj && (o_dist = o->intersect(p, l_dir)) && o_dist < l_dist)
     {
       in_shadow = true;
       break;
@@ -52,12 +52,12 @@ vec illuminate(scene &sc, light *light, object *target, vec p, vec n)
   if (!in_shadow)
   {
     auto lambert = std::max(.0f, l_dir.dot(n));
-    color = color + lambert * light->intensity(p) * target->color_at(p);
+    color = color + lambert * light->intensity(p) * obj->color_at(p);
   }
   return color;
 }
 
-ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d, int bounces)
+ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
 {
   o += 1e-6 * dir; // prevent self-intersection
   object *obj_hit = nullptr;
@@ -65,7 +65,6 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d, int b
   for (auto *obj : sc.objects)
   {
     float t;
-    // if (obj != from && (t = obj->intersect(o, dir)) && t < t_hit)
     if ((t = obj->intersect(o, dir)) && t < t_hit)
     {
       t_hit = t;
@@ -102,7 +101,7 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d, int b
   {
     // shoot secondary rays
     auto random_dir = next_dir(n);
-    auto res = ray_trace(sc, obj_hit, p, random_dir, d - 1, bounces);
+    auto res = ray_trace(sc, p, random_dir, d - 1, bounces);
     if (res.obj_hit)
     {
       point_light l(res.p, res.accumulated);
@@ -114,7 +113,7 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d, int b
   {
     // reflection
     auto r = (dir - 2 * dir.dot(n) * n).normalize();
-    reflection = ray_trace(sc, obj_hit, p, r, d, bounces - 1).accumulated;
+    reflection = ray_trace(sc, p, r, d, bounces - 1).accumulated;
 
     // refraction
     auto eta = dir.dot(obj_hit->norm_at(p)) > 0 ? obj_hit->ior : 1 / obj_hit->ior;
@@ -126,7 +125,7 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d, int b
     else
     {
       auto r = (eta * dir - (eta * n.dot(dir) + std::sqrt(k)) * n).normalize();
-      refraction = ray_trace(sc, obj_hit, p, r, d, bounces - 1).accumulated;
+      refraction = ray_trace(sc, p, r, d, bounces - 1).accumulated;
     }
   }
 
@@ -155,7 +154,7 @@ void render(scene &sc, std::vector<unsigned char> &image)
         auto sx = (2 * x - w) / std::max(w, h);
         auto sy = float(h - 2 * y) / std::max(w, h);
         auto dir = (forward + sx * right + sy * up).normalize();
-        auto res = ray_trace(sc, nullptr, eye, dir, sc.d, sc.bounces);
+        auto res = ray_trace(sc, eye, dir, sc.d, sc.bounces);
         if (res.obj_hit)
         {
           hit_any = true;

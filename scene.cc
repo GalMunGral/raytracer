@@ -52,7 +52,7 @@ scene parse(char *filename)
       float x, y, z, r;
       fs >> x >> y >> z >> r;
       sc.objects.push_back(
-          new sphere(x, y, z, r, cur_color,
+          new sphere(x, y, z, r, cur_texture, cur_color,
                      cur_shininess, cur_transparency, cur_ior, cur_roughness));
     }
     else if (cmd == "plane")
@@ -99,7 +99,7 @@ scene parse(char *filename)
     {
       std::string filename;
       fs >> filename;
-      cur_texture = new texture(filename);
+      cur_texture = filename == "none" ? nullptr : new texture(filename);
     }
     else if (cmd == "aa")
     {
@@ -178,8 +178,14 @@ vec sphere::norm_at(vec p)
   return (p - c).normalize();
 }
 
-vec sphere::color_at(vec)
+vec sphere::color_at(vec p)
 {
+  if (_texture)
+  {
+    float s = (std::atan2f(c.z - p.z, p.x - c.x) + M_PI) / (2 * M_PI);
+    float t = std::abs(std::atan2f(p.z - c.z, p.y - c.y)) / M_PI;
+    return _texture->color_at(vec(s, t, 0));
+  }
   return _color;
 }
 

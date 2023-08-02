@@ -24,11 +24,12 @@ class sphere : public object
 public:
   vec c;
   float r;
+  texture *_texture;
   vec _color;
-  sphere(float x, float y, float z, float r, vec color,
+  sphere(float x, float y, float z, float r, texture *texture, vec color,
          vec shininess, vec transparency, float ior, float roughness)
       : object(shininess, transparency, ior, roughness),
-        c(x, y, z), r(r), _color(color){};
+        c(x, y, z), r(r), _texture(texture), _color(color){};
   ~sphere();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);
