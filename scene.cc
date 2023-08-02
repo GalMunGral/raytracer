@@ -14,7 +14,7 @@ scene parse(char *filename)
   std::vector<vec> normals;
   std::vector<vec> texcoords;
   texture *cur_texture = nullptr;
-  color cur_color(1, 1, 1);
+  vec cur_color(1, 1, 1);
   vec cur_normal;
   vec cur_texcoord;
 
@@ -41,10 +41,7 @@ scene parse(char *filename)
     {
       float r, g, b;
       fs >> r >> g >> b;
-      cur_color = color(r, g, b);
-      // cur_color = color(std::clamp(r, -1.0f, 1.0f),
-      //                   std::clamp(g, -1.0f, 1.0f),
-      //                   std::clamp(b, -1.0f, 1.0f));
+      cur_color = vec(r, g, b);
     }
     else if (cmd == "sphere")
     {
@@ -134,7 +131,7 @@ vec sphere::norm_at(vec p)
   return (p - c).normalize();
 }
 
-color sphere::color_at(vec)
+vec sphere::color_at(vec)
 {
   return _color;
 }
@@ -157,13 +154,13 @@ vec plane::norm_at(vec)
   return vec(a, b, c).normalize();
 }
 
-color plane::color_at(vec)
+vec plane::color_at(vec)
 {
   return _color;
 }
 
 triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2,
-                   vec st0, vec st1, vec st2, texture *texture, color color)
+                   vec st0, vec st1, vec st2, texture *texture, vec color)
     : p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2),
       st0(st0), st1(st1), st2(st2), _texture(texture), _color(color)
 {
@@ -199,7 +196,7 @@ vec triangle::norm_at(vec p)
   return (b0 * n0 + b1 * n1 + b2 * n2).normalize();
 }
 
-color triangle::color_at(vec p)
+vec triangle::color_at(vec p)
 {
   if (_texture)
   {
@@ -218,7 +215,7 @@ vec directional_light::dir(vec)
   return _dir.normalize();
 }
 
-color directional_light::intensity(vec)
+vec directional_light::intensity(vec)
 {
   return _color;
 }
@@ -235,7 +232,7 @@ vec point_light::dir(vec o)
   return (_pos - o).normalize();
 }
 
-color point_light::intensity(vec o)
+vec point_light::intensity(vec o)
 {
   auto d = dist(o);
   return _color * std::pow(1 / d, 2);

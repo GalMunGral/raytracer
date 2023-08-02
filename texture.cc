@@ -24,15 +24,15 @@ texture::texture(std::string &filename)
   }
 }
 
-color texture::pixel(int i, int j)
+vec texture::pixel(int i, int j)
 {
-  return color(
+  return vec(
       linear(buffer[(i * w + j) * 4] / 255.0),
       linear(buffer[(i * w + j) * 4 + 1] / 255.0),
       linear(buffer[(i * w + j) * 4 + 2] / 255.0));
 }
 
-color texture::color_at(vec st)
+vec texture::color_at(vec st)
 {
   float x = st.x * (w - 1), y = st.y * (h - 1);
   int i = y, j = x;

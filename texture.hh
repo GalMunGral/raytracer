@@ -12,7 +12,7 @@ class texture
 public:
   texture(std::string &filename);
 
-  color pixel(int i, int j);
+  vec pixel(int i, int j);
 
-  color color_at(vec st);
+  vec color_at(vec st);
 };

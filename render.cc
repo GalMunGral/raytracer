@@ -28,15 +28,15 @@ struct ray_trace_result
 {
   object *obj_hit = nullptr;
   vec p;
-  color accumulated;
+  vec accumulated;
   ray_trace_result(){};
-  ray_trace_result(object *obj, vec p, color c)
+  ray_trace_result(object *obj, vec p, vec c)
       : obj_hit(obj), p(p), accumulated(c){};
 };
 
-color illuminate(scene &sc, light *light, object *target, vec p, vec n)
+vec illuminate(scene &sc, light *light, object *target, vec p, vec n)
 {
-  color color;
+  vec color;
   auto l_dir = light->dir(p);
   auto l_dist = light->dist(p);
   bool in_shadow = false;
@@ -52,7 +52,7 @@ color illuminate(scene &sc, light *light, object *target, vec p, vec n)
   if (!in_shadow)
   {
     auto lambert = std::max(.0f, l_dir.dot(n));
-    color += lambert * light->intensity(p) * target->color_at(p);
+    color = color + lambert * light->intensity(p) * target->color_at(p);
   }
   return color;
 }
@@ -81,11 +81,11 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
   if (n.dot(dir) > 0)
     n = -n;
 
-  color color;
+  vec color;
 
   for (auto *l : sc.lights)
   {
-    color += illuminate(sc, l, obj_hit, p, n);
+    color = color + illuminate(sc, l, obj_hit, p, n);
   }
 
   if (d)
@@ -96,7 +96,7 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
     if (res.obj_hit)
     {
       point_light l(res.p, res.accumulated);
-      color += illuminate(sc, &l, obj_hit, p, n);
+      color = color + illuminate(sc, &l, obj_hit, p, n);
     }
   }
 
@@ -115,7 +115,7 @@ void render(scene &sc, std::vector<unsigned char> &image)
     {
       // std::cout << i << ',' << j << '\n';
       bool hit_any = false;
-      color c;
+      vec c;
       for (int k = 0; k < sc.aa; ++k)
       {
         float x = j + dist(gen), y = i + dist(gen);
@@ -131,9 +131,9 @@ void render(scene &sc, std::vector<unsigned char> &image)
       }
       if (hit_any)
       {
-        image[4 * (i * sc.width + j)] = gamma(c.r) * 255;
-        image[4 * (i * sc.width + j) + 1] = gamma(c.g) * 255;
-        image[4 * (i * sc.width + j) + 2] = gamma(c.b) * 255;
+        image[4 * (i * sc.width + j)] = gamma(c.x) * 255;
+        image[4 * (i * sc.width + j) + 1] = gamma(c.y) * 255;
+        image[4 * (i * sc.width + j) + 2] = gamma(c.z) * 255;
         image[4 * (i * sc.width + j) + 3] = 255;
       }
     }
