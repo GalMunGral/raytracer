@@ -11,13 +11,29 @@ scene parse(char *filename)
   std::string cmd;
   std::vector<vec> points;
   std::vector<vec> normals;
+  std::vector<vec> texcoords;
+  texture *cur_texture = nullptr;
   color cur_color(1, 1, 1);
   vec cur_normal;
+  vec cur_texcoord;
   while (fs >> cmd)
   {
     if (cmd == "png")
     {
       fs >> sc.width >> sc.height >> sc.filename;
+    }
+    else if (cmd == "sun")
+    {
+      vec dir;
+      fs >> dir.x >> dir.y >> dir.z;
+      sc.lights.push_back(new directional_light(dir, cur_color));
+    }
+    else if (cmd == "bulb")
+    {
+
+      vec pos;
+      fs >> pos.x >> pos.y >> pos.z;
+      sc.lights.push_back(new point_light(pos, cur_color));
     }
     else if (cmd == "color")
     {
@@ -41,32 +57,35 @@ scene parse(char *filename)
       fs >> x >> y >> z;
       points.push_back(vec(x, y, z));
       normals.push_back(cur_normal);
+      texcoords.push_back(cur_texcoord);
+    }
+    else if (cmd == "texcoord")
+    {
+      fs >> cur_texcoord.x >> cur_texcoord.y;
     }
     else if (cmd == "normal")
     {
       fs >> cur_normal.x >> cur_normal.y >> cur_normal.z;
     }
-    else if (cmd == "trif")
+    else if (cmd == "trif" || cmd == "trit")
     {
       int i, j, k;
       fs >> i >> j >> k;
+      int n = points.size();
+      i = i > 0 ? i - 1 : i + n;
+      j = j > 0 ? j - 1 : j + n;
+      k = k > 0 ? k - 1 : k + n;
       sc.objects.push_back(
-          new triangle(points[i - 1], points[j - 1], points[k - 1],
-                       normals[i - 1], normals[j - 1], normals[k - 1],
-                       cur_color));
+          new triangle(points[i], points[j], points[k],
+                       normals[i], normals[j], normals[k],
+                       texcoords[i], texcoords[j], texcoords[k],
+                       cur_texture, cur_color));
     }
-    else if (cmd == "sun")
+    else if (cmd == "texture")
     {
-      vec dir;
-      fs >> dir.x >> dir.y >> dir.z;
-      sc.lights.push_back(new directional_light(dir, cur_color));
-    }
-    else if (cmd == "bulb")
-    {
-
-      vec pos;
-      fs >> pos.x >> pos.y >> pos.z;
-      sc.lights.push_back(new point_light(pos, cur_color));
+      std::string filename;
+      fs >> filename;
+      cur_texture = new texture(filename);
     }
   }
 
@@ -123,13 +142,15 @@ color plane::color_at(vec)
   return _color;
 }
 
-triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, color color)
-    : p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2), _color(color)
+triangle::triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2,
+                   vec st0, vec st1, vec st2, texture *texture, color color)
+    : p0(p0), p1(p1), p2(p2), n0(n0), n1(n1), n2(n2),
+      st0(st0), st1(st1), st2(st2), _texture(texture), _color(color)
 {
   auto n = (p1 - p0).cross(p2 - p0);
   if (!n0.norm() || !n1.norm() || !n2.norm())
   {
-    n0 = n1 = n2 = n.normalize();
+    this->n0 = this->n1 = this->n2 = n.normalize();
   }
   e1 = (p2 - p0).cross(n);
   e1 = e1 / (e1.dot(p1 - p0));
@@ -155,11 +176,16 @@ float triangle::intersect(vec o, vec dir)
 vec triangle::norm_at(vec p)
 {
   auto b1 = (p - p0).dot(e1), b2 = (p - p0).dot(e2), b0 = 1 - b1 - b2;
-  return b0 * n0 + b1 * n1 + b2 * n2;
+  return (b0 * n0 + b1 * n1 + b2 * n2).normalize();
 }
 
-color triangle::color_at(vec)
+color triangle::color_at(vec p)
 {
+  if (_texture)
+  {
+    auto b1 = (p - p0).dot(e1), b2 = (p - p0).dot(e2), b0 = 1 - b1 - b2;
+    return _texture->color_at(b0 * st0 + b1 * st1 + b2 * st2);
+  }
   return _color;
 }
 

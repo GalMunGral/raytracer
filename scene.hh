@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include "vec.hh"
+#include "lodepng.h"
+#include "texture.hh"
 
 class object
 {
@@ -42,9 +44,11 @@ public:
 class triangle : public object
 {
 public:
-  vec p0, p1, p2, n0, n1, n2, e1, e2;
+  vec p0, p1, p2, n0, n1, n2, st0, st1, st2, e1, e2;
+  texture *_texture;
   color _color;
-  triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2, color color);
+  triangle(vec p0, vec p1, vec p2, vec n0, vec n1, vec n2,
+           vec st0, vec st1, vec st2, texture *texture, color color);
   ~triangle();
   float intersect(vec o, vec dir);
   vec norm_at(vec p);
