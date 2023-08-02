@@ -52,7 +52,6 @@ color illuminate(scene &sc, light *light, object *target, vec p, vec n)
   if (!in_shadow)
   {
     auto lambert = std::max(.0f, l_dir.dot(n));
-    // std::cout << "intensity" << light->intensity(p) << '\n';
     color += lambert * light->intensity(p) * target->color_at(p);
   }
   return color;
@@ -60,8 +59,6 @@ color illuminate(scene &sc, light *light, object *target, vec p, vec n)
 
 ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
 {
-  // std::cout << d << dir << '\n';
-
   object *obj_hit = nullptr;
   auto t_hit = std::numeric_limits<float>::max();
   for (auto *obj : sc.objects)
@@ -94,7 +91,8 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
   if (d)
   {
     // shoot secondary rays
-    auto res = ray_trace(sc, obj_hit, p, next_dir(n), d - 1);
+    auto dir = next_dir(n);
+    auto res = ray_trace(sc, obj_hit, p, dir, d - 1);
     if (res.obj_hit)
     {
       point_light l(res.p, res.accumulated);
@@ -102,7 +100,7 @@ ray_trace_result ray_trace(scene &sc, object *from, vec o, vec dir, int d = 1)
     }
   }
 
-  std::cout << d << "dir" << obj_hit->norm_at(p) << n << next_dir(n) << "color" << color << '\n';
+  // std::cout << d << "dir" << obj_hit->norm_at(p) << n << next_dir(n) << "color" << color << '\n';
   return {obj_hit, p, color};
 }
 
@@ -115,7 +113,7 @@ void render(scene &sc, std::vector<unsigned char> &image)
   {
     for (int j = 0; j < sc.width; ++j)
     {
-      std::cout << i << ',' << j << '\n';
+      // std::cout << i << ',' << j << '\n';
       bool hit_any = false;
       color c;
       for (int k = 0; k < sc.aa; ++k)

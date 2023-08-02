@@ -102,6 +102,11 @@ scene parse(char *filename)
     {
       fs >> sc.d;
     }
+    else if (cmd == "shininess")
+    {
+      int s;
+      fs >> s;
+    }
   }
 
   return sc;
