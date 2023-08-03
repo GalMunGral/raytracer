@@ -19,7 +19,6 @@ plane 0 1 0 2
 shininess 0.5
 roughness 0
 
-
 color 0.4 0.4 0.7
 sphere 0.0 4.0 -6.0  0.0
 color 0.8 0.5 0.7
