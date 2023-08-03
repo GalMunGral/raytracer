@@ -1,4 +1,3 @@
-
 #include "lodepng.hh"
 #include "texture.hh"
 
@@ -36,7 +35,6 @@ vec texture::color_at(vec st)
 {
   float x = st.x * (w - 1), y = st.y * (h - 1);
   int i = y, j = x;
-  return pixel(i, j);
   return pixel(i, j) * (i + 1 - y) * (j + 1 - x) +
          pixel(i, j + 1) * (i + 1 - y) * (x - j) +
          pixel(i + 1, j) * (y - i) * (j + 1 - x) +

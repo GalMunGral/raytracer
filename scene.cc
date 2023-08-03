@@ -212,6 +212,8 @@ vec sphere::color_at(vec p)
   {
     float s = (std::atan2f(c.z - p.z, p.x - c.x) + M_PI) / (2 * M_PI);
     float t = std::abs(std::atan2f(p.z - c.z, p.y - c.y)) / M_PI;
+    if (s > 1)
+      s -= 1;
     return _texture->color_at(vec(s, t, 0));
   }
   return _color;
