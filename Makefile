@@ -1,5 +1,10 @@
-CC=g++
-FLAGS=-std=c++17 -Wall -Wextra
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra
 
-main: main.cc render.cc scene.cc texture.cc vec.cc lodepng.cc
-	$(CC) $(FLAGS) -o $@ $^
+main: main.o render.o scene.o texture.o vec.o lodepng.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+%.o: %.cc *.hh *.h
+	$(CXX) $(CXXFLAGS) $^ -c -o $@
+clean:
+	rm main *.o

@@ -30,7 +30,7 @@ vec vec::operator-(vec o)
 
 vec vec::operator*(float c)
 {
-  return vec(x * c, y * c, z * c);
+  return c ? vec(x * c, y * c, z * c) : vec();
 }
 
 vec vec::operator*(vec o)
@@ -73,7 +73,15 @@ vec vec::normalize()
   return operator/(norm());
 }
 
-std::ostream &operator<<(std::ostream &os, vec v)
+vec vec::clamp()
+{
+  return vec(std::clamp(x, 0.0f, 1.0f),
+             std::clamp(y, 0.0f, 1.0f),
+             std::clamp(z, 0.0f, 1.0f));
+}
+
+std::ostream &
+operator<<(std::ostream &os, vec v)
 {
   os << "{ " << v.x << ',' << v.y << ',' << v.z << " }";
   return os;

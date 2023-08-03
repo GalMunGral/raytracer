@@ -1,0 +1,10 @@
+png 1000 1000 reflection3.png
+
+bounces 10
+
+shininess 0.8
+color 2 2 2
+sun 0 1 1.2
+
+sphere -2 0 -1 2
+sphere 2 0 -1 2

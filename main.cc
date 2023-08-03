@@ -1,5 +1,5 @@
 #include <iostream>
-#include "lodepng.h"
+#include "lodepng.hh"
 #include "scene.hh"
 #include "render.hh"
 

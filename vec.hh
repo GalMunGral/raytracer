@@ -18,6 +18,7 @@ struct vec
   float squared_norm();
   float norm();
   vec normalize();
+  vec clamp();
 };
 
 vec operator-(vec v);

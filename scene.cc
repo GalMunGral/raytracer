@@ -5,6 +5,14 @@
 #include <cmath>
 #include "scene.hh"
 
+bool has_multiple_args(std::istream &s)
+{
+  char c;
+  s >> c;
+  s.unget();
+  return !std::isalpha(c);
+}
+
 scene parse(char *filename)
 {
   scene sc;
@@ -24,6 +32,7 @@ scene parse(char *filename)
 
   while (fs >> cmd)
   {
+    std::cout << '[' << cmd << ']' << std::endl;
     if (cmd == "png")
     {
       fs >> sc.width >> sc.height >> sc.filename;
@@ -101,56 +110,6 @@ scene parse(char *filename)
       fs >> filename;
       cur_texture = filename == "none" ? nullptr : new texture(filename);
     }
-    else if (cmd == "aa")
-    {
-      fs >> sc.aa;
-    }
-    else if (cmd == "gi")
-    {
-      fs >> sc.d;
-    }
-    else if (cmd == "shininess")
-    {
-      float s;
-      fs >> s;
-      cur_shininess = vec(s, s, s);
-      if (fs >> s)
-      {
-        cur_shininess.y = s;
-        fs >> cur_shininess.z;
-      }
-      else
-      {
-        fs.clear();
-      }
-    }
-    else if (cmd == "transparency")
-    {
-      float t;
-      fs >> t;
-      cur_transparency = vec(t, t, t);
-      if (fs >> t)
-      {
-        cur_transparency.y = t;
-        fs >> cur_transparency.z;
-      }
-      else
-      {
-        fs.clear();
-      }
-    }
-    else if (cmd == "ior")
-    {
-      fs >> cur_ior;
-    }
-    else if (cmd == "bounces")
-    {
-      fs >> sc.bounces;
-    }
-    else if (cmd == "roughness")
-    {
-      fs >> cur_roughness;
-    }
     else if (cmd == "eye")
     {
       fs >> sc.eye.x >> sc.eye.y >> sc.eye.z;
@@ -175,6 +134,50 @@ scene parse(char *filename)
     {
       fs >> sc.focus >> sc.lens;
       sc.dof = true;
+    }
+    else if (cmd == "expose")
+    {
+      fs >> sc.expose;
+    }
+    else if (cmd == "aa")
+    {
+      fs >> sc.aa;
+    }
+    else if (cmd == "gi") // global illumination
+    {
+      fs >> sc.d;
+    }
+    else if (cmd == "shininess")
+    {
+      float s;
+      fs >> s;
+      cur_shininess = vec(s, s, s);
+      if (has_multiple_args(fs))
+      {
+        fs >> cur_shininess.y >> cur_shininess.z;
+      }
+    }
+    else if (cmd == "transparency")
+    {
+      float t;
+      fs >> t;
+      cur_transparency = vec(t, t, t);
+      if (has_multiple_args(fs))
+      {
+        fs >> cur_transparency.y >> cur_transparency.z;
+      }
+    }
+    else if (cmd == "ior")
+    {
+      fs >> cur_ior;
+    }
+    else if (cmd == "bounces")
+    {
+      fs >> sc.bounces;
+    }
+    else if (cmd == "roughness")
+    {
+      fs >> cur_roughness;
     }
   }
 
@@ -297,7 +300,7 @@ vec point_light::dir(vec o)
 vec point_light::intensity(vec o)
 {
   auto d = dist(o);
-  return _color * std::pow(1 / d, 2);
+  return _color * std::min(100.0f, 1 / (d * d));
 }
 
 float point_light::dist(vec o)

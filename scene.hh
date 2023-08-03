@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include "vec.hh"
-#include "lodepng.h"
+#include "lodepng.hh"
 #include "texture.hh"
 
 class object
@@ -120,11 +120,11 @@ class scene
 {
 public:
   int width, height, aa, d, bounces;
-  float focus, lens;
+  float expose, focus, lens;
   vec eye, forward, right, up;
   bool fisheye, dof;
   scene()
-      : aa(1), bounces(4), eye(0, 0, 0), forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0){};
+      : aa(4), bounces(4), eye(0, 0, 0), forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0){};
   std::string filename;
   std::vector<object *> objects;
   std::vector<light *> lights;

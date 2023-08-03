@@ -1,0 +1,17 @@
+png 1000 1000 shadow1.png
+
+color 1 0 1
+sun 0 2 1
+color 0 1 1
+sun .2 1 1
+
+texture moon.png
+sphere 0.2 .5 -1 0.2
+
+texture earth.png
+sphere -.2 0 -1.4 0.5
+
+texture none
+color 1 0 0
+sphere 0 -2 -2.5 1.5
+

@@ -1,5 +1,5 @@
 
-#include "lodepng.h"
+#include "lodepng.hh"
 #include "texture.hh"
 
 float linear(float g)
