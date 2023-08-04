@@ -11,8 +11,6 @@ class texture
 
 public:
   texture(std::string &filename);
-
   vec pixel(int i, int j);
-
   vec color_at(vec st);
 };

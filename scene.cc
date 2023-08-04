@@ -437,7 +437,7 @@ std::pair<object *const, float> bvh_node::intersect(vec o, vec dir)
        *  - when doing shadow testing, we need to start from outside the object.
        *  - when computing refraction, we need to start from inside the object.
        */
-      auto t = obj->intersect(o + 1e-6 * dir, dir);
+      auto t = obj->intersect(o + 1e-3 * dir, dir);
       if (t > 0 && t < t_hit)
       {
         obj_hit = obj.get();
