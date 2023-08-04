@@ -1,4 +1,4 @@
-png 1000 1000 ex0.png
+png 10000 10000 ex0.png
 
 color 0.5 0.75 1
 sun 1 1 1
