@@ -1,2 +1,2 @@
-# simple-raytracer
+# simple raytracer
 ![](examples/ex2.png)
