@@ -1,6 +1,6 @@
 png 1000 1000 reflection3.png
 
-bounces 10
+bounces 5
 
 shininess 0.8
 color 2 2 2

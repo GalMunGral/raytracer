@@ -5,7 +5,7 @@ sun 0 2 1
 color 0 1 1
 sun .2 1 1
 
-texture moon.png
+color 1 1 1
 sphere 0.2 .5 -1 0.2
 
 texture earth.png

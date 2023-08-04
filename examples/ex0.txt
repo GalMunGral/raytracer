@@ -5,8 +5,8 @@ sun 1 1 1
 color 0.5 0.25 0
 sun -1 0.5 0.5
 
-bounces 1
-aa 1
+bounces 2
+aa 10
 dof 2.25 0.01
 
 shininess 0.75

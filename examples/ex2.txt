@@ -1,8 +1,8 @@
-png 1000 1000 ex2.png
+png 200 200 ex2.png
 
 expose 2
 
-aa 1
+aa 10
 fisheye
 gi 1
 

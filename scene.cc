@@ -32,7 +32,6 @@ scene parse(char *filename)
 
   while (fs >> cmd)
   {
-    std::cout << '[' << cmd << ']' << std::endl;
     if (cmd == "png")
     {
       fs >> sc.width >> sc.height >> sc.filename;
@@ -41,36 +40,22 @@ scene parse(char *filename)
     {
       vec dir;
       fs >> dir.x >> dir.y >> dir.z;
-      sc.lights.push_back(new directional_light(dir, cur_color));
+      sc.lights.push_back(
+          std::unique_ptr<light>(new directional_light(dir, cur_color)));
     }
     else if (cmd == "bulb")
     {
 
       vec pos;
       fs >> pos.x >> pos.y >> pos.z;
-      sc.lights.push_back(new point_light(pos, cur_color));
+      sc.lights.push_back(
+          std::unique_ptr<light>(new point_light(pos, cur_color)));
     }
     else if (cmd == "color")
     {
       float r, g, b;
       fs >> r >> g >> b;
       cur_color = vec(r, g, b);
-    }
-    else if (cmd == "sphere")
-    {
-      float x, y, z, r;
-      fs >> x >> y >> z >> r;
-      sc.objects.push_back(
-          new sphere(x, y, z, r, cur_texture, cur_color,
-                     cur_shininess, cur_transparency, cur_ior, cur_roughness));
-    }
-    else if (cmd == "plane")
-    {
-      float a, b, c, d;
-      fs >> a >> b >> c >> d;
-      sc.objects.push_back(
-          new plane(a, b, c, d, cur_color,
-                    cur_shininess, cur_transparency, cur_ior, cur_roughness));
     }
     else if (cmd == "xyz")
     {
@@ -96,13 +81,29 @@ scene parse(char *filename)
       i = i > 0 ? i - 1 : i + n;
       j = j > 0 ? j - 1 : j + n;
       k = k > 0 ? k - 1 : k + n;
-      sc.objects.push_back(
+      sc.objects.add(std::shared_ptr<object>(
           new triangle(points[i], points[j], points[k],
                        normals[i], normals[j], normals[k],
                        texcoords[i], texcoords[j], texcoords[k],
                        cur_texture, cur_color,
                        cur_shininess, cur_transparency,
-                       cur_ior, cur_roughness));
+                       cur_ior, cur_roughness)));
+    }
+    else if (cmd == "sphere")
+    {
+      float x, y, z, r;
+      fs >> x >> y >> z >> r;
+      sc.objects.add(std::shared_ptr<object>(
+          new sphere(x, y, z, r, cur_texture, cur_color,
+                     cur_shininess, cur_transparency, cur_ior, cur_roughness)));
+    }
+    else if (cmd == "plane")
+    {
+      float a, b, c, d;
+      fs >> a >> b >> c >> d;
+      sc.objects.add(std::shared_ptr<object>(
+          new plane(a, b, c, d, cur_color,
+                    cur_shininess, cur_transparency, cur_ior, cur_roughness)));
     }
     else if (cmd == "texture")
     {
@@ -184,9 +185,36 @@ scene parse(char *filename)
   return sc;
 }
 
+float aabb::size()
+{
+  return std::min({x2 - x1, y2 - y1, z2 - z1});
+}
+
+bool aabb::intersect(vec o, vec dir)
+{
+  auto tx1 = (x1 - o.x) / dir.x;
+  auto tx2 = (x2 - o.x) / dir.x;
+  auto ty1 = (y1 - o.y) / dir.y;
+  auto ty2 = (y2 - o.y) / dir.y;
+  auto tz1 = (z1 - o.z) / dir.z;
+  auto tz2 = (z2 - o.z) / dir.z;
+  auto t1 = std::max({0.0f,
+                      std::min(tx1, tx2), std::min(ty1, ty2), std::min(tz1, tz2)});
+  auto t2 = std::min({std::numeric_limits<float>::max(),
+                      std::max(tx1, tx2), std::max(ty1, ty2), std::max(tz1, tz2)});
+  return t1 < t2;
+}
+
 object::~object(){};
 
 sphere::~sphere(){};
+
+bool sphere::might_intersect(aabb &box)
+{
+  return c.x > box.x1 - r && c.x < box.x2 + r &&
+         c.y > box.y1 - r && c.y < box.y2 + r &&
+         c.z > box.z1 - r && c.z < box.z2 + r;
+}
 
 float sphere::intersect(vec o, vec dir)
 {
@@ -221,6 +249,25 @@ vec sphere::color_at(vec p)
 
 plane::~plane(){};
 
+bool plane::might_intersect(aabb &box)
+{
+  bool prev = (a * box.x1 + b * box.y1 + c * box.z1 + d) > 0;
+  for (auto x : {box.x1, box.x2})
+  {
+    for (auto y : {box.y1, box.y2})
+    {
+      for (auto z : {box.z1, box.z2})
+      {
+        if ((a * x + b * y + c * z + d) > 0 != prev)
+        {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 float plane::intersect(vec o, vec dir)
 {
   auto p = a   ? vec(-d / a, 0, 0)
@@ -243,6 +290,23 @@ vec plane::color_at(vec)
 }
 
 triangle::~triangle(){};
+
+bool triangle::might_intersect(aabb &box)
+{
+  float x1 = p0.x, x2 = p0.x, y1 = p0.y, y2 = p0.y, z1 = p0.z, z2 = p0.z;
+  for (auto &p : {p1, p2})
+  {
+    x1 = std::min(x1, p.x);
+    x2 = std::max(x2, p.x);
+    y1 = std::min(y1, p.y);
+    y2 = std::max(y2, p.y);
+    z1 = std::min(z1, p.z);
+    z2 = std::max(z2, p.z);
+  }
+  return std::max(x1, box.x1) <= std::min(x2, box.x2) &&
+         std::max(y1, box.y1) <= std::min(y2, box.y2) &&
+         std::max(z1, box.z1) <= std::min(z2, box.z2);
+}
 
 float triangle::intersect(vec o, vec dir)
 {
@@ -308,4 +372,95 @@ vec point_light::intensity(vec o)
 float point_light::dist(vec o)
 {
   return (_pos - o).norm();
+}
+
+void bvh_node::split()
+{
+  auto [x1, x2, y1, y2, z1, z2] = box;
+  float mx = (x1 + x2) / 2, my = (y1 + y2) / 2, mz = (z1 + z2) / 2;
+
+  children.emplace_back(new bvh_node(x1, mx, y1, my, z1, mz));
+  children.emplace_back(new bvh_node(x1, mx, y1, my, mz, z2));
+  children.emplace_back(new bvh_node(x1, mx, my, y2, z1, mz));
+  children.emplace_back(new bvh_node(x1, mx, my, y2, mz, z2));
+  children.emplace_back(new bvh_node(mx, x2, y1, my, z1, mz));
+  children.emplace_back(new bvh_node(mx, x2, y1, my, mz, z2));
+  children.emplace_back(new bvh_node(mx, x2, my, y2, z1, mz));
+  children.emplace_back(new bvh_node(mx, x2, my, y2, mz, z2));
+
+  for (auto &obj : objects)
+  {
+    for (auto &child : children)
+    {
+      if (obj->might_intersect(child->box))
+      {
+        child->add(obj);
+      }
+    }
+  }
+  objects.clear();
+  is_leaf = false;
+}
+
+void bvh_node::add(std::shared_ptr<object> obj)
+{
+  if (objects.size() == 5 && box.size() > 0.1)
+  {
+    split();
+  }
+  if (is_leaf)
+  {
+    objects.push_back(obj);
+    return;
+  }
+  for (auto &child : children)
+  {
+    if (obj->might_intersect(child->box))
+    {
+      child->add(obj);
+    }
+  }
+}
+
+std::pair<object *const, float> bvh_node::intersect(vec o, vec dir)
+{
+  object *obj_hit = nullptr;
+  float t_hit = std::numeric_limits<float>::max();
+
+  if (is_leaf)
+  {
+    for (auto &obj : objects)
+    {
+      /**
+       * Advance the ray by a small offset to compensate for numerical errors.
+       * There are two cases where this is necessary:
+       *  - when doing shadow testing, we need to start from outside the object.
+       *  - when computing refraction, we need to start from inside the object.
+       */
+      auto t = obj->intersect(o + 1e-6 * dir, dir);
+      if (t > 0 && t < t_hit)
+      {
+        obj_hit = obj.get();
+        t_hit = t;
+      }
+    }
+  }
+  else
+  {
+    for (auto &child : children)
+    {
+      if (child->box.intersect(o, dir))
+      {
+
+        auto [obj, t] = child->intersect(o, dir);
+        if (obj && t < t_hit)
+        {
+          obj_hit = obj;
+          t_hit = t;
+        }
+      }
+    }
+  }
+
+  return {obj_hit, t_hit};
 }

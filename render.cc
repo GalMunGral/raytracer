@@ -39,7 +39,7 @@ vec sample_unit_sphere()
 
 struct ray_trace_result
 {
-  object *obj_hit = nullptr;
+  object *obj_hit = nullptr; // !!!
   vec p;
   vec intensity;
   ray_trace_result(){};
@@ -47,49 +47,31 @@ struct ray_trace_result
       : obj_hit(obj), p(p), intensity(c){};
 };
 
-vec illuminate(scene &sc, light *light, object *obj, vec p, vec n)
+vec illuminate(scene &sc, light &light, object *obj, vec p, vec n)
 {
-  vec color;
-  auto l_dir = light->dir(p);
-  auto l_dist = light->dist(p);
+  auto l_dir = light.dir(p);
+  auto l_dist = light.dist(p);
 
-  bool in_shadow = false;
-  for (auto *o : sc.objects)
+  auto [obj_hit, t_hit] = sc.objects.intersect(p, l_dir);
+
+  if (obj_hit && t_hit < l_dist) // in shadow
   {
-    float o_dist = 0;
-    if (o != obj && (o_dist = o->intersect(p, l_dir)) && o_dist < l_dist)
-    {
-      in_shadow = true;
-      break;
-    }
+    return vec();
   }
 
-  if (!in_shadow)
-  {
-    auto lambert = std::max(.0f, l_dir.dot(n));
-    color = color + lambert * light->intensity(p) * obj->color_at(p);
-  }
-
+  auto lambert = std::max(.0f, l_dir.dot(n));
+  auto color = lambert * light.intensity(p) * obj->color_at(p);
   return color.clamp();
 }
 
 ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
 {
-  o += 1e-3 * dir; // prevent self-intersection
-  object *obj_hit = nullptr;
-  auto t_hit = std::numeric_limits<float>::max();
-  for (auto *obj : sc.objects)
-  {
-    float t;
-    if ((t = obj->intersect(o, dir)) && t < t_hit)
-    {
-      t_hit = t;
-      obj_hit = obj;
-    }
-  }
+  auto [obj_hit, t_hit] = sc.objects.intersect(o, dir);
 
   if (!obj_hit)
+  {
     return ray_trace_result();
+  }
 
   auto p = o + t_hit * dir;
   auto n = obj_hit->norm_at(p);
@@ -108,9 +90,9 @@ ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
 
   vec diffuse, refraction, reflection;
 
-  for (auto *l : sc.lights)
+  for (auto &l : sc.lights)
   {
-    diffuse += illuminate(sc, l, obj_hit, p, n);
+    diffuse += illuminate(sc, *l, obj_hit, p, n);
   }
 
   if (d)
@@ -121,7 +103,7 @@ ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
     if (res.obj_hit)
     {
       point_light l(res.p, res.intensity);
-      diffuse += illuminate(sc, &l, obj_hit, p, n);
+      diffuse += illuminate(sc, l, obj_hit, p, n);
     }
   }
 
@@ -129,8 +111,12 @@ ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
   {
     // reflection
     auto r = (dir - 2 * dir.dot(n) * n).normalize();
-    reflection = ray_trace(sc, p, r, d, bounces - 1).intensity;
+    auto res = ray_trace(sc, p, r, d, bounces - 1);
+    reflection = res.intensity;
+  }
 
+  if (bounces)
+  {
     // refraction
     bool entering = dir.dot(obj_hit->norm_at(p)) < 0;
     auto eta = entering ? 1 / obj_hit->ior : obj_hit->ior;
@@ -142,7 +128,8 @@ ray_trace_result ray_trace(scene &sc, vec o, vec dir, int d, int bounces)
     else
     {
       auto r = (eta * dir - (eta * n.dot(dir) + std::sqrt(k)) * n).normalize();
-      refraction = ray_trace(sc, p, r, d, bounces - 1).intensity;
+      auto res = ray_trace(sc, p + 0.001 * r, r, d, bounces - 1);
+      refraction = res.intensity;
     }
   }
 
@@ -211,8 +198,8 @@ void render(scene &sc, std::vector<unsigned char> &image)
         image[4 * (i * sc.width + j) + 2] = gamma(c.z, sc.expose) * 255;
         image[4 * (i * sc.width + j) + 3] = 255;
       }
-
-      std::cout << "progress: " << float(i * sc.width + j) / (sc.width * sc.height) << '\r' << std::flush;
     }
+
+    std::cout << "progress: " << (i + 1.0) / h << '\r' << std::flush;
   }
 }

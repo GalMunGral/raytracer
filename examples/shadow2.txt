@@ -7,7 +7,7 @@ bulb 1 1 -.5
 color 1 1 0
 bulb 1 1 -1
 
-texture moon.png
+color 1 1 1
 sphere 0 .5 -1 0.2
 
 texture earth.png

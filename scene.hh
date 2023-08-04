@@ -1,12 +1,27 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <string>
+#include <utility>
 #include "vec.hh"
 #include "lodepng.hh"
 #include "texture.hh"
 
+class aabb
+{
+public:
+  float x1, x2, y1, y2, z1, z2;
+  aabb(float x1, float x2, float y1, float y2, float z1, float z2)
+      : x1(x1), x2(x2), y1(y1), y2(y2), z1(z1), z2(z2){};
+  float size();
+  bool intersect(vec o, vec dir);
+};
+
+std::ostream &operator<<(std::ostream &s, aabb &b);
+
 class object
+
 {
 public:
   vec shininess, transparency;
@@ -15,6 +30,7 @@ public:
       : shininess(shininess), transparency(transparency), ior(ior), roughness(roughness){};
   virtual ~object() = 0;
   virtual float intersect(vec o, vec dir) = 0;
+  virtual bool might_intersect(aabb &box) = 0;
   virtual vec norm_at(vec p) = 0;
   virtual vec color_at(vec p) = 0;
 };
@@ -32,6 +48,7 @@ public:
         c(x, y, z), r(r), _texture(texture), _color(color){};
   ~sphere();
   float intersect(vec o, vec dir);
+  bool might_intersect(aabb &box);
   vec norm_at(vec p);
   vec color_at(vec p);
 };
@@ -47,6 +64,7 @@ public:
         a(a), b(b), c(c), d(d), _color(color){};
   ~plane();
   float intersect(vec o, vec dir);
+  bool might_intersect(aabb &box);
   vec norm_at(vec p);
   vec color_at(vec p);
 };
@@ -76,13 +94,13 @@ public:
   }
   ~triangle();
   float intersect(vec o, vec dir);
+  bool might_intersect(aabb &box);
   vec norm_at(vec p);
   vec color_at(vec p);
 };
 
 class light
 {
-
 public:
   virtual ~light() = 0;
   virtual vec dir(vec) = 0;
@@ -116,6 +134,25 @@ public:
   float dist(vec o);
 };
 
+class bvh_node
+{
+  bool is_leaf = true;
+  aabb box;
+  std::vector<std::shared_ptr<object>> objects;
+  std::vector<std::unique_ptr<bvh_node>> children;
+
+public:
+  bvh_node() : bvh_node(-100, 100, -100, 100, -100, 100){};
+  bvh_node(float x1, float x2, float y1, float y2, float z1, float z2)
+      : box(x1, x2, y1, y2, z1, z2){};
+
+  std::pair<object *const, float> intersect(vec o, vec dir);
+  void add(std::shared_ptr<object> obj);
+
+private:
+  void split();
+};
+
 class scene
 {
 public:
@@ -124,10 +161,10 @@ public:
   vec eye, forward, right, up;
   bool fisheye, dof;
   scene()
-      : aa(4), bounces(4), eye(0, 0, 0), forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0){};
+      : aa(1), bounces(4), eye(0, 0, 0), forward(0, 0, -1), right(1, 0, 0), up(0, 1, 0){};
   std::string filename;
-  std::vector<object *> objects;
-  std::vector<light *> lights;
+  std::vector<std::unique_ptr<light>> lights;
+  bvh_node objects;
 };
 
 scene parse(char *filename);
