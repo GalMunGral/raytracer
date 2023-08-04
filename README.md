@@ -1,2 +1,1 @@
-# simple raytracer
-![](examples/ex2.png)
+![](examples/ex0.jpg)
