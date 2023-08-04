@@ -1,2 +1,2 @@
 # simple-raytracer
-![test](examples/ex2.png)
+![](examples/ex2.png)
